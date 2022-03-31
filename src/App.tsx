@@ -13,6 +13,10 @@ import ConnectButton from './components/ConnectButton';
 import { Web3Provider } from '@ethersproject/providers';
 import { getChainData } from './helpers/utilities';
 
+import { LIBRARY_ADDRESS } from './contracts';
+import { getContract } from './helpers/ethers';
+import Library from './contracts/abis/Library.json';
+
 const SLayout = styled.div`
   position: relative;
   width: 100%;
