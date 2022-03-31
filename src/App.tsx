@@ -12,10 +12,13 @@ import ConnectButton from './components/ConnectButton';
 
 import { Web3Provider } from '@ethersproject/providers';
 import { getChainData } from './helpers/utilities';
+import { ethers } from "ethers";
 
 import { LIBRARY_ADDRESS } from './contracts';
-import { getContract } from './helpers/ethers';
 import Library from './contracts/abis/Library.json';
+// import { isAddress } from '@ethersproject/address';
+
+
 
 const SLayout = styled.div`
   position: relative;
@@ -109,6 +112,31 @@ class App extends React.Component<any, any> {
     const network = await library.getNetwork();
 
     const address = this.provider.selectedAddress ? this.provider.selectedAddress : this.provider.accounts[0];
+
+      // const libContract = getContract(LIBRARY_ADDRESS, Library.abi , library , address);
+
+    const iface = new ethers.utils.Interface(Library.abi);
+
+    const signer = library.getSigner();
+
+    const encodedData = iface.encodeFunctionData("addBook", [4,'Vladimir', 'Brahimovich', 3]);
+
+    const tx = {
+      to: LIBRARY_ADDRESS,
+      data: encodedData
+    };
+    await signer.sendTransaction(tx)
+
+    ethers.utils.isAddress('0xeE8404b554Fa335A40AD96e3d0bd215f319075b');
+   // isAddress => true;
+  // ethers.utils.isAddress('0xeE8404b554Fa335A40AD96e3d0bd215f319075bF') => true
+  ethers.BigNumber.from("42");
+
+      // { BigNumber: "42" }
+      ethers.BigNumber.from(2);
+
+    // If you console log it, the result will be:
+    // BigNumber {_hex: "0x02", _isBigNumber: true}
 
     await this.setState({
       library,
