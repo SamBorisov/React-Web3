@@ -9,9 +9,15 @@ import Wrapper from './components/Wrapper';
 import Header from './components/Header';
 import Loader from './components/Loader';
 import ConnectButton from './components/ConnectButton';
+import Button from './components/Button';
+
 
 import { Web3Provider } from '@ethersproject/providers';
 import { getChainData } from './helpers/utilities';
+
+import { US_ELECTION_ADDRESS } from './contracts';
+import { getContract } from './helpers/ethers';
+import USElection from './contracts/abis/USElection.json';
 
 const SLayout = styled.div`
   position: relative;
@@ -106,6 +112,16 @@ class App extends React.Component<any, any> {
 
     const address = this.provider.selectedAddress ? this.provider.selectedAddress : this.provider.accounts[0];
 
+    const electionContract = getContract(US_ELECTION_ADDRESS, USElection.abi, library, address);
+
+	    await this.setState({
+      library,
+      chainId: network.chainId,
+      address,
+      connected: true,
+      electionContract
+    });
+
     await this.setState({
       library,
       chainId: network.chainId,
@@ -117,18 +133,65 @@ class App extends React.Component<any, any> {
 
   };
 
-  public subscribeToProviderEvents = async (provider:any) => {
+  public currentLeader = async () => {
+    const { electionContract } = this.state;
+
+    const currentLeader = await electionContract.currentLeader();
+    console.log(currentLeader);
+    await this.setState({currentLeader});
+  }
+
+  public submitElectionResult = async () => {
+    const { electionContract } = this.state;
+
+    const dataArr = [
+      'Idaho',
+      51,
+      50,
+      24
+	  ];
+		
+		await this.setState({ fetching: true });
+		const transaction = await electionContract.submitStateResult(dataArr);
+
+		await this.setState({ transactionHash: transaction.hash });
+		
+		const transactionReceipt = await transaction.wait();
+		if (transactionReceipt.status !== 1) {
+			// React to failure
+		}		
+
+};
+
+  // public subscribeToProviderEvents = async (provider:any) => {
+  //   if (!provider.on) {
+  //     return;
+  //   }
+
+  //   provider.on("accountsChanged", this.changedAccount);
+  //   provider.on("networkChanged", this.networkChanged);
+  //   provider.on("close", this.close);
+
+  //   await this.web3Modal.off('accountsChanged');
+  // };
+  public subscribeToProviderEvents = async (provider: any) => {
     if (!provider.on) {
       return;
     }
+    provider.on("close", () => this.resetApp());
+    provider.on("accountsChanged", async (accounts: string[]) => {
+      await this.setState({ address: accounts[0] });
+    });
 
-    provider.on("accountsChanged", this.changedAccount);
-    provider.on("networkChanged", this.networkChanged);
-    provider.on("close", this.close);
+    provider.on("networkChanged", async (networkId: number) => {
+      const library = new Web3Provider(provider);
+      const network = await library.getNetwork();
+      const chainId = network.chainId;
 
-    await this.web3Modal.off('accountsChanged');
+      await this.setState({ chainId, library });
+    });
   };
-
+  
   public async unSubscribe(provider:any) {
     // Workaround for metamask widget > 9.0.3 (provider.off is undefined);
     window.location.reload(false);
@@ -180,11 +243,12 @@ class App extends React.Component<any, any> {
     localStorage.removeItem("WEB3_CONNECT_CACHED_PROVIDER");
     localStorage.removeItem("walletconnect");
     await this.unSubscribe(this.provider);
+    
 
     this.setState({ ...INITIAL_STATE });
 
   };
-
+  
   public render = () => {
     const {
       address,
@@ -211,6 +275,8 @@ class App extends React.Component<any, any> {
             ) : (
                 <SLanding center>
                   {!this.state.connected && <ConnectButton onClick={this.onConnect} />}
+                  {this.state.connected && <Button onClick={this.currentLeader}>Display Leader</Button>}
+                  {this.state.connected && <Button onClick={this.submitElectionResult}>Submit Result</Button>}
                 </SLanding>
               )}
           </SContent>
